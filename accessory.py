@@ -1,6 +1,8 @@
 import logging
 import RPi.GPIO as GPIO
 from time import sleep
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(23, GPIO.OUT)
 
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_DOOR_LOCK
@@ -27,7 +29,6 @@ class Lock(Accessory):
         self.add_nfc_access_service()
 
     def on_endpoint_authenticated(self, endpoint):
-        GPIO.output(23, GPIO.HIGH)
         self._lock_target_state = 0 if self._lock_current_state else 1
         log.info(
             f"Toggling lock state due to endpoint authentication event {self._lock_target_state} -> {self._lock_current_state} {endpoint}"
@@ -36,8 +37,11 @@ class Lock(Accessory):
         self._lock_current_state = self._lock_target_state
         self.lock_current_state.set_value(self._lock_current_state, should_notify=True)
 
-        sleep(6) # Sleep for 6 seconds
-        GPIO.output(23, GPIO.LOW)
+        # control gpio when device state changes to unlocked
+        if self._lock_target_state == 0:  # 0 represents unlocked state
+            GPIO.output(23, GPIO.HIGH)
+            sleep(6)  # Sleep for 6 seconds
+            GPIO.output(23, GPIO.LOW)
 
     def add_preload_service(self, service, chars=None, unique_id=None):
         """Create a service with the given name and add it to this acc."""
@@ -129,6 +133,13 @@ class Lock(Accessory):
         log.info(f"set_lock_target_state {value}")
         self._lock_target_state = self._lock_current_state = value
         self.lock_current_state.set_value(self._lock_current_state, should_notify=True)
+
+        # control gpio when device state changes to unlocked
+        if value == 0:  # 0 represents unlocked state
+            GPIO.output(23, GPIO.HIGH)
+            sleep(6)  # Sleep for 6 seconds
+            GPIO.output(23, GPIO.LOW)
+
         return self._lock_target_state
 
     def get_lock_version(self):
