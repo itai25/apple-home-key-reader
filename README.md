@@ -1,3 +1,5 @@
+Changed to run on a raspberry pi with a remote for the door lock connected to the pi via gpio
+
 # Apple Home Key Reader
 
 <p float="left">
